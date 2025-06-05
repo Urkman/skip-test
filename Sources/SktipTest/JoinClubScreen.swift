@@ -1,5 +1,6 @@
 import SkipFuseUI
 
+//@MainActor // FIX: include this line
 struct JoinClubScreen: View {
     @Environment(\.customDismiss) var customDismiss
 
@@ -34,9 +35,7 @@ struct JoinClubScreen: View {
                     isLoading: isLoadingJoin,
                     isDisabled: !isFormValid || isLoadingJoin
                 ) {
-                    Task {
-                        await performJoinClub()
-                    }
+                    Task { await performJoinClub() }
                 }
             }
         )
@@ -46,8 +45,8 @@ struct JoinClubScreen: View {
         Form {
             userDetailsSection
             findClubSection
-            inviteCodeSection // This is now a @ViewBuilder, handles optionality
-            errorDisplaySection // This is now a @ViewBuilder, handles optionality
+            inviteCodeSection
+            errorDisplaySection
         }
     }
 
@@ -67,8 +66,17 @@ struct JoinClubScreen: View {
                     loadingView
                 } else if !searchResults.isEmpty {
                     searchResultList
+
+                    // FIX
+                    // change this:
                 } else if !searchQuery.isEmpty {
-                    Text("Nothing found")
+                     Text("Nothing found")
+
+                    // to this:
+//                } else {
+//                    if !searchQuery.isEmpty {
+//                        Text("Nothing found")
+//                    }
                 }
             }
         }
@@ -107,7 +115,7 @@ struct JoinClubScreen: View {
                     club: club,
                     isSelected: selectedClub?.id == club.id
                 ) {
-                    Task { selectClub(club) }
+                    Task { await selectClub(club) }
                 }
             }
         }
@@ -116,18 +124,17 @@ struct JoinClubScreen: View {
     private var noClubsFoundSection: some View {
         Text("No clubs found for \"\(searchQuery)\".")
             .foregroundColor(Color.secondaryText)
-            .font(.caption) // Using caption for less prominent text
+            .font(.caption)
     }
 
     @ViewBuilder
     private var inviteCodeSection: some View {
         if let club = selectedClub, club.isPrivate {
-            Section(header: Text("Private Club Access for \(club.name)")) { // Added club name for clarity
+            Section(header: Text("Private Club Access for \(club.name)")) {
                 TextField("Invite Code", text: $inviteCode)
                     .autocorrectionDisabled(true)
-                    // REMOVE: .autocapitalization(.none) - not supported
             }
-            .transition(.opacity.combined(with: .move(edge: .top))) // Animation
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
@@ -144,11 +151,11 @@ struct JoinClubScreen: View {
     @MainActor
     private func selectClub(_ club: Club) {
         if selectedClub?.id == club.id {
-            selectedClub = nil // Deselect if tapped again
-            inviteCode = ""   // Clear invite code
+            selectedClub = nil
+            inviteCode = ""
         } else {
             selectedClub = club
-            // Clear invite code if new club is public
+
             if !club.isPrivate {
                 inviteCode = ""
             }
@@ -164,7 +171,6 @@ struct JoinClubScreen: View {
     }
 }
 
-// Helper view for displaying club search results (internal access level)
 struct ClubSearchRow: View {
     let club: Club
     let isSelected: Bool
@@ -174,40 +180,38 @@ struct ClubSearchRow: View {
         HStack {
             VStack(alignment: .leading, spacing: AppSpacing.Spacing.extraSmall) {
                 Text(club.name)
-                    .font(.headline) // Using SkipFuseUI's font system
-                    .foregroundColor(Color.text) // Using project's color definition
+                    .font(.headline)
+                    .foregroundColor(Color.text)
 
                 HStack(spacing: AppSpacing.Spacing.small) {
                     Text(club.isPrivate ? "Private" : "Public")
                         .font(.caption)
                         .foregroundColor(Color.secondaryText)
 
-                    Text("•") // Separator
+                    Text("•")
                         .font(.caption)
                         .foregroundColor(Color.secondaryText)
 
-                    // Assuming club.createdAt is a Date
                     Text("Created: \(formatDate(club.createdAt))")
                         .font(.caption)
                         .foregroundColor(Color.secondaryText)
                 }
             }
 
-            Spacer() // Pushes content to sides
+            Spacer()
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(Color.accent)
-                    .font(.system(size: AppSpacing.IconSize.small)) // Standard system font size for icon
+                    .font(.system(size: AppSpacing.IconSize.small))
             }
         }
-        .padding(.vertical, AppSpacing.Padding.small) // Standard padding
-        .onTapGesture { // Make the row tappable
+        .padding(.vertical, AppSpacing.Padding.small)
+        .onTapGesture {
             onTap()
         }
     }
 
-    // Date formatter (private as it's only used here)
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
